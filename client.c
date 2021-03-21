@@ -44,10 +44,12 @@ int main(int argc, char *argv[])
 
 	for(;;){
 		printf("client>");
+		//get command
 		fgets(fname, 100, stdin);
 		fname[strcspn(fname,"\n")]=0;
 
 		j=0; cnt=0;
+		memset(splitStrings,0,sizeof(splitStrings));
 		for(i=0;i<=(strlen(fname));i++)
 		{
 			if(fname[i]==' '||fname[i]=='\0')
@@ -63,6 +65,7 @@ int main(int argc, char *argv[])
 	        	}
 
 	        }
+		//handling command
 		if(strcmp(splitStrings[0],"/login")){
 			if ((rv = getaddrinfo(splitStrings[3], splitStrings[4], &hints, &servinfo)) != 0) {
 				fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
@@ -70,7 +73,7 @@ int main(int argc, char *argv[])
 			}
 
 			memset(&hints, 0, sizeof hints);
-			hints.ai_family = AF_UNSPEC; // set to AF_INET to use IPv4
+			hints.ai_family = AF_UNSPEC; // set to unspecified protocol
 			hints.ai_socktype = SOCK_STREAM;
 			for(p = servinfo; p != NULL; p = p->ai_next) {
 				if ((sockfd = socket(p->ai_family, p->ai_socktype,
@@ -90,10 +93,78 @@ int main(int argc, char *argv[])
 				fprintf(stderr, "talker: failed to create socket\n");
 				return 2;
 			}
+			//Make Struct
+			struct message msg;
+			msg.type=0;
+			//msg.source=splitStrings[1];
+			//msg.data=splitStrings[2];
+			msg.size=sizeof(msg.data);
+			//Turn struct to string to send
+			char msgStr[1500]="";
+			char numtostr[100];
+			strcat(msgStr,"LOGIN:");
+			sprintf(numtostr,"%d", msg.size);
+			strcat(msgStr,numtostr);
+			strcat(msgStr,":");
+			strcat(msgStr,splitStrings[1]);
+			strcat(msgStr,":");
+			strcat(msgStr,splitStrings[2]);
+			//send login req
+			if(send(sockfd,msgStr,sizeof(msgStr),0)==-1){
+				perror("send");
+			}
+			//look for resp
+			if((numbytes=recv(sockfd,buf,MAX_DATA,0))==-1){
+				perror("recv");
+				exit(1);
+			}
+			//process resp
+			buf[numbytes]='\0';
+			if(strcmp(buf,"LO_ACK")==0){
+				printf("Successful Login");
+			}
+			if(strcmp(buf,"LO_NAK")==0){
+				printf("Unsuccessful Login");
+				continue;
+			}
+			//Enter server
+			for(;;){
+				char prompt[100]="client/";
+				strcat(prompt,splitStrings[3]);
+				strcat(prompt,":");
+				strcat(prompt,splitStrings[4]);
+				strcat(prompt,">");
+				printf(prompt);
+				//get command
+				fgets(fname, 100, stdin);
+				fname[strcspn(fname,"\n")]=0;
+
+				j=0; cnt=0;
+				memset(splitStrings,0,sizeof(splitStrings));
+				for(i=0;i<=(strlen(fname));i++)
+				{
+					if(fname[i]==' '||fname[i]=='\0')
+			        	{
+			            		splitStrings[cnt][j]='\0';
+			            		cnt++;  //for next word
+			            		j=0;    //for next word, init index to 0
+				    	}
+			        	else
+			        	{
+	        		    		splitStrings[cnt][j]=fname[i];
+	            			j++;
+	        			}
+	
+			        }
+			}
+
+
+			
+
 
 			
 		}
-
+		if(strcmp(splitStrings[0],"/exit")){close(sockfd);}
 		if(strcmp(splitStrings[0],"/quit")){break;}
 		
 
