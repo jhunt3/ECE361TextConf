@@ -18,16 +18,16 @@
 #include <stdbool.h>
 #include <time.h>
 //#define SERVERPORT "4950"	// the port users will be connecting to
-#define MAXBUFLEN 100
+#define MAXBUFLEN 1500
 #define MAX_NAME 100
 #define MAX_DATA 1000
-int main(int argc, char *argv[])
+int main(void)
 {
 	int sockfd;
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
 	int numbytes;
-	char fname[100];
+	char fname[200];
 	char splitStrings[5][50];
 	int i, j, cnt;
 	char buf[MAXBUFLEN];
@@ -43,35 +43,41 @@ int main(int argc, char *argv[])
 	};
 
 	for(;;){
-		printf("client>");
+		printf("client>\n");
 		//get command
-		fgets(fname, 100, stdin);
+		fgets(fname, 200, stdin);
 		fname[strcspn(fname,"\n")]=0;
-
 		j=0; cnt=0;
 		memset(splitStrings,0,sizeof(splitStrings));
 		for(i=0;i<=(strlen(fname));i++)
 		{
-			if(fname[i]==' '||fname[i]=='\0')
-	        	{
-	            		splitStrings[cnt][j]='\0';
-	            		cnt++;  //for next word
-	            		j=0;    //for next word, init index to 0
-		    	}
-	        	else
-	        	{
-	            		splitStrings[cnt][j]=fname[i];
-	            		j++;
-	        	}
-
+			if(fname[i]==' '||fname[i]=='\0'){
+	           	splitStrings[cnt][j]='\0';
+	        	cnt++;  //for next word
+	    		j=0;    //for next word, init index to 0
+	    	}
+	       	else{
+	        	splitStrings[cnt][j]=fname[i];
+	        	j++;
 	        }
+
+	    }
+		// printf(splitStrings[0]);
+		// printf(splitStrings[1]);
+		// printf(splitStrings[2]);
+		// printf(splitStrings[3]);
+		// printf(splitStrings[4]);
 		//handling command
-		if(strcmp(splitStrings[0],"/login")){
+		//printf("Handling command");
+		if(strcmp(splitStrings[0],"/login")==0){
+			printf("Sending login request\n");
+
+			memset(&hints, 0, sizeof hints);
 			if ((rv = getaddrinfo(splitStrings[3], splitStrings[4], &hints, &servinfo)) != 0) {
 				fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
 				return 1;
 			}
-
+			//printf("Got addrinfo");
 			memset(&hints, 0, sizeof hints);
 			hints.ai_family = AF_UNSPEC; // set to unspecified protocol
 			hints.ai_socktype = SOCK_STREAM;
@@ -110,9 +116,11 @@ int main(int argc, char *argv[])
 			strcat(msgStr,":");
 			strcat(msgStr,splitStrings[2]);
 			//send login req
+			printf("Sending...\n");
 			if(send(sockfd,msgStr,sizeof(msgStr),0)==-1){
 				perror("send");
 			}
+			memset(buf,0,MAXBUFLEN);
 			//look for resp
 			if((numbytes=recv(sockfd,buf,MAX_DATA,0))==-1){
 				perror("recv");
@@ -121,10 +129,10 @@ int main(int argc, char *argv[])
 			//process resp
 			buf[numbytes]='\0';
 			if(strcmp(buf,"LO_ACK")==0){
-				printf("Successful Login");
+				printf("Successful Login\n");
 			}
 			if(strcmp(buf,"LO_NAK")==0){
-				printf("Unsuccessful Login");
+				printf("Unsuccessful Login\n");
 				continue;
 			}
 			//Enter server
@@ -156,6 +164,7 @@ int main(int argc, char *argv[])
 	        			}
 	
 			        }
+				if(strcmp(splitStrings[0],"/logout")){close(sockfd);break;}
 			}
 
 
@@ -164,7 +173,7 @@ int main(int argc, char *argv[])
 
 			
 		}
-		if(strcmp(splitStrings[0],"/exit")){close(sockfd);}
+		
 		if(strcmp(splitStrings[0],"/quit")){break;}
 		
 
