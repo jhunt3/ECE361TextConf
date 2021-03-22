@@ -116,7 +116,6 @@ int main(void)
 			strcat(msgStr,":");
 			strcat(msgStr,splitStrings[2]);
 			//send login req
-			printf("Sending...\n");
 			if(send(sockfd,msgStr,sizeof(msgStr),0)==-1){
 				perror("send");
 			}
@@ -136,35 +135,40 @@ int main(void)
 				continue;
 			}
 			//Enter server
+			char prompt[100]="client/";
+			strcat(prompt,splitStrings[3]);
+			strcat(prompt,":");
+			strcat(prompt,splitStrings[4]);
+			strcat(prompt,">");
 			for(;;){
-				char prompt[100]="client/";
-				strcat(prompt,splitStrings[3]);
-				strcat(prompt,":");
-				strcat(prompt,splitStrings[4]);
-				strcat(prompt,">");
+				memset(splitStrings,0,sizeof(splitStrings));
 				printf(prompt);
 				//get command
 				fgets(fname, 100, stdin);
 				fname[strcspn(fname,"\n")]=0;
 
 				j=0; cnt=0;
-				memset(splitStrings,0,sizeof(splitStrings));
+				
 				for(i=0;i<=(strlen(fname));i++)
 				{
 					if(fname[i]==' '||fname[i]=='\0')
-			        	{
-			            		splitStrings[cnt][j]='\0';
-			            		cnt++;  //for next word
-			            		j=0;    //for next word, init index to 0
-				    	}
-			        	else
-			        	{
-	        		    		splitStrings[cnt][j]=fname[i];
-	            			j++;
-	        			}
-	
-			        }
-				if(strcmp(splitStrings[0],"/logout")){close(sockfd);break;}
+		        	{
+		           		splitStrings[cnt][j]='\0';
+		           		cnt++;  //for next word
+		           		j=0;    //for next word, init index to 0
+			    	}
+		        	else
+		        	{
+	       		    	splitStrings[cnt][j]=fname[i];
+	           			j++;
+	       			}
+		        }
+
+				if(strcmp(splitStrings[0],"/logout")==0){
+					printf("logging out...\n");
+					close(sockfd);
+					break;
+				}
 			}
 
 

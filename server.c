@@ -143,30 +143,19 @@ int main(void){
                         close(i); // bye!                        
                         FD_CLR(i, &master); // remove from master set                    
                     } else {   
-                        printf("initializing vars");
-                        printf(buf);
-                        printf("\n");
+
                         printf("selectserver: socket %d sent message\n", i);
-                        printf("initializing vars");
-                        printf(buf);
-                        printf("\n");
-                        printf("selectserver: socket %d sent message\n", i);
-                        printf("initializing vars");
                         printf(buf);
                         printf("\n");
                         
 
                         char type[20];
-                        printf("selectserver: socket %d sent message\n", i);
                         char value[100];
                         int size;
                         char source[50];
                         char data[1000];
                         int cnt=0;
                         int arg=1;
-                        printf("selectserver: socket %d sent message\n", i);
-                        printf("Parsing message...%d",arg);
-                        printf("selectserver: socket %d sent message\n", i);
                         for(int k=0;k<500;k++){
                             //printf("%d",k);
                             if(buf[k]==':'){
@@ -193,19 +182,16 @@ int main(void){
                             }
                         }
 			printf(type);
-			printf("selectserver: socket %d sent message\n", i);
                         bool loginsuccess;
 			printf(type);
-			printf("selectserver: socket %d sent message\n", i);
                         if(strcmp(type,"LOGIN")==0){
                             printf("Received login request");
-			    printf("selectserver: socket %d sent message\n", i);
-                            for(int k=0;i<(sizeof(clientData)/sizeof(struct clientInfo));k++){
+                            for(int k=0;k<(sizeof(clientData)/sizeof(struct clientInfo));k++){
 				printf(source);
 				printf(clientData[k].clientID);
-				printf("selectserver: socket %d sent message\n", i);
-                                if(source==clientData[k].clientID){
-                                    if(data==clientData[k].password){
+                                if(strcmp(source,clientData[k].clientID)==0){
+                                    printf("found clientdata");
+                                    if(strcmp(data,clientData[k].password)==0){
                                         if (send(i, "LO_ACK", sizeof("LO_ACK"), 0) == -1) {                                        
                                             perror("send");                                    
                                         }
@@ -233,7 +219,7 @@ int main(void){
                         //         }                            
                         //     }                        
                         // }     
-			printf("selectserver: socket %d sent message\n", i);               
+              
                     }                
                 } // END handle data from client            
             } // END got new incoming connection        
