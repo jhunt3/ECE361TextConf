@@ -156,11 +156,13 @@ int main(void){
                         char data[1000];
                         int cnt=0;
                         int arg=1;
+                        printf(buf);
+                        printf("\n");
+                        memset(value,0,100);
                         for(int k=0;k<500;k++){
                             //printf("%d",k);
                             if(buf[k]==':'){
-				printf(value);
-				printf("\n");
+
                                 if(arg==1){
                                     strcpy(type,value);
                                 }else if(arg==2){
@@ -170,10 +172,10 @@ int main(void){
                                     for(int j=k+1;j<size;j++){
                                         data[j-k-1]=buf[j];
                                     }
-				    printf(data);
+
                                     break;
                                 }
-				memset(value,0,100);
+				                
                                 arg++;
                                 cnt=0;
                             }else{
@@ -181,16 +183,19 @@ int main(void){
                                 cnt++;
                             }
                         }
-			printf(type);
-                        bool loginsuccess;
-			printf(type);
+                        printf("Found command:");
+                        printf(type);
+                        printf("\n");
+                        bool loginsuccess=false;
+
                         if(strcmp(type,"LOGIN")==0){
-                            printf("Received login request");
+                            printf("Received login request\n");
                             for(int k=0;k<(sizeof(clientData)/sizeof(struct clientInfo));k++){
-				printf(source);
-				printf(clientData[k].clientID);
+                                printf(source);
+                                printf(clientData[k].clientID);
+                                printf("\n");
                                 if(strcmp(source,clientData[k].clientID)==0){
-                                    printf("found clientdata");
+                                    
                                     if(strcmp(data,clientData[k].password)==0){
                                         if (send(i, "LO_ACK", sizeof("LO_ACK"), 0) == -1) {                                        
                                             perror("send");                                    
@@ -206,6 +211,88 @@ int main(void){
                                     perror("send");                                    
                                 }
                             }
+                        }
+                        
+
+                        if(strcmp(type,"NEW_SESS")==0){
+                            printf("Received new session request\n");
+                            for(int k=0;k<(sizeof(clientData)/sizeof(struct clientInfo));k++){
+
+                                if(strcmp(source,clientData[k].clientID)==0){
+                                    printf("found clientdata\n");
+                                    strcpy(clientData[k].sessionID,data);
+                                    if (send(i, "NS_ACK", sizeof("NS_ACK"), 0) == -1) {                                        
+                                        perror("send");                                    
+                                    }
+                                    break;
+                                }
+
+
+                            }
+
+                        }
+
+                        if(strcmp(type,"JOIN")==0){
+                            printf("Received join request\n");
+                            for(int k=0;k<(sizeof(clientData)/sizeof(struct clientInfo));k++){
+
+                                if(strcmp(source,clientData[k].clientID)==0){
+                                    printf("found clientdata\n");
+                                    strcpy(clientData[k].sessionID,data);
+                                    if (send(i, "JN_ACK", sizeof("JN_ACK"), 0) == -1) {                                        
+                                        perror("send");                                    
+                                    }
+                                    break;
+                                }
+
+
+                            }
+
+                        }
+                        if(strcmp(type,"LEAVE_SESS")==0){
+                            printf("Received leave session request\n");
+                            for(int k=0;k<(sizeof(clientData)/sizeof(struct clientInfo));k++){
+
+                                if(strcmp(source,clientData[k].clientID)==0){
+                                    printf("found clientdata\n");
+                                    memset(clientData[k].sessionID,0,1500);
+
+                                    break;
+                                }
+
+
+                            }
+
+                        }
+                        if(strcmp(type,"MESSAGE")==0){
+                            printf("Received message request\n");
+                            for(int k=0;k<(sizeof(clientData)/sizeof(struct clientInfo));k++){
+
+                                if(strcmp(source,clientData[k].clientID)==0){
+                                    printf("found clientdata\n");
+                                    memset(clientData[k].sessionID,0,1500);
+                                    for(int m=0;m<(sizeof(clientData)/sizeof(struct clientInfo));m++){
+                                        if(strcmp(clientData[k].sessionID,clientData[m].sessionID)==0){
+                                            // char msgStr[1500]="";
+                                            // strcat(msgStr,"MESSGE");
+                                            // strcat(msgStr,":");
+                                            // strcat(msgStr,sizeof(data));
+                                            // strcat(msgStr,":");
+                                            // strcat(msgStr,source);
+                                            // strcat(msgStr,":");
+                                            // strcat(msgStr,data);
+                                            if (send(i, buf, sizeof(buf), 0) == -1) {                                        
+                                                perror("send");                                    
+                                            }
+                                        }
+                                    }
+
+                                    break;
+                                }
+
+
+                            }
+
                         }
                         // we got some data from a client                        
                         // for(j = 0; j <= fdmax; j++) {                            
