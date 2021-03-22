@@ -228,140 +228,272 @@ int main(void)
 					
 					strcat(prompt,">");
 					//printf(prompt);
+					fd_set read_fds;
+					int stdin_fd=fileno(stdin);
+					int fdmax; 
+					FD_ZERO(&read_fds);
+					FD_SET(sockfd,&read_fds);
+					FD_SET(stdin_fd,&read_fds);
+					fdmax=sockfd;
+					printf("Sockfd: %d\n",sockfd);
+					printf("\n");
+					if(stdin_fd>fdmax){fdmax=stdin_fd;};
 					for(;;){
 						
-						
+						//printf("Sockfd1: %d\n",sockfd);
 						//printf("entering room...\n");
-						printf(prompt);
-						// printf("entering room...\n");
-						// fd_set read_fds;
-						// int fdmax; 
-						// FD_ZERO(&read_fds);
-						// FD_SET(sockfd,&read_fds);
-						// fdmax=sockfd;
-						// if (select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1) {            
-            			// 	perror("select");            
-            			// 	exit(4);  
-						// }      
-        				// printf("entering room...\n");
+						printf("%d\n",);
+						printf("%s",prompt);
+						//printf("Sockfd2: %d\n",sockfd);
+						if (select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1) {            
+            				perror("select");            
+            				exit(4);  
+						}
+						//printf("Found something to read\n");
+						//printf("Sockfd3: %d\n",sockfd);
 						// //trun through the existing connections looking for data to read        
-        				// for(i = 0; i <= fdmax; i++) {            
-            			// 	if (FD_ISSET(i, &read_fds)) { // we got one!! 
-						// 		memset(buf,0,MAXBUFLEN);                   
-                    	// 		if ((numbytes = recv(i, buf, MAXBUFLEN, 0)) <= 0) {
-						// 			// got error or connection closed by client                        
-						// 			if (numbytes == 0) {                            
-						// 				// connection closed                            
-						// 				printf("selectserver: socket %d hung up\n", i);                        
-						// 			} else {                            
-						// 				perror("recv");                        
-						// 			}                        
-						// 			close(i); // bye!                        
-						// 			FD_CLR(i, &read_fds); // remove from master set                    
-						// 		}else{
-						// 			printf("selectserver: socket %d sent message\n", i);
-						// 			printf(buf);
-						// 			printf("\n");
+        				for(i = 0; i <= fdmax; i++) {            
+            				if (FD_ISSET(i, &read_fds)) { // we got one!! 
+								if(i==sockfd){
+									printf("Socket to read\n");
+									memset(buf,0,MAXBUFLEN);                   
+									if ((numbytes = recv(i, buf, MAXBUFLEN, 0)) <= 0) {
+										// got error or connection closed by client                        
+										if (numbytes == 0) {                            
+											// connection closed                            
+											printf("selectserver: socket %d hung up\n", i);                        
+										} else {                            
+											perror("recv");                        
+										}                        
+										close(i); // bye!                        
+										FD_CLR(i, &read_fds); // remove from master set                    
+									}else{
+										printf("selectserver: socket %d sent message\n", i);
+										printf(buf);
+										printf("\n");
+										
+
+										char type[20];
+										char value[100];
+										int size;
+										char source[50];
+										char data[1000];
+										int cnt=0;
+										int arg=1;
+										for(int k=0;k<500;k++){
+											//printf("%d",k);
+											if(buf[k]==':'){
+												printf(value);
+												printf("\n");
+												if(arg==1){
+													strcpy(type,value);
+												}else if(arg==2){
+													size=atoi(value);
+												}else if(arg==3){
+													strcpy(source,value);
+													for(int j=k+1;j<size;j++){
+														data[j-k-1]=buf[j];
+													}
+													printf(data);
+													break;
+												}
+												memset(value,0,100);
+												arg++;
+												cnt=0;
+											}else{
+												value[cnt]=buf[k];
+												cnt++;
+											}
+										}
+										char print[1000];
+										strcpy(print,source);
+										strcat(print,":");
+										strcat(print,data);
+										printf(print);
+									
+									}
+								}else if(i==stdin_fd){
+									printf("Console to read\n");
+									memset(splitStrings,0,sizeof(splitStrings));
+									//get command
+									fgets(fname, 100, stdin);
+									fname[strcspn(fname,"\n")]=0;
+									printf(fname);
+									printf("\n");
+									j=0; cnt=0;
+							
+									for(i=0;i<=(strlen(fname));i++)
+									{
+										if(fname[i]==' '||fname[i]=='\0')
+										{
+											splitStrings[cnt][j]='\0';
+											cnt++;  //for next word
+											j=0;    //for next word, init index to 0
+										}
+										else
+										{
+											splitStrings[cnt][j]=fname[i];
+											j++;
+										}
+									}
+									if(strcmp(splitStrings[0],"/leavesession")==0){
+										memset(msgStr,0,1500);
+										strcat(msgStr,"LEAVE_SESS:");
+										sprintf(numtostr,"%d", sizeof(splitStrings[1]));
+										strcat(msgStr,numtostr);
+										strcat(msgStr,":");
+										strcat(msgStr,clientID);
+										strcat(msgStr,":");
+										//strcat(msgStr,splitStrings[1]);
+										if(send(sockfd,msgStr,sizeof(msgStr),0)==-1){
+											perror("send");
+										}
+										printf("Leaving session...\n");
+										break;
+										
+
+									}	
+									//printf("1");
+									if(fname[0]!='/'){
+										memset(msgStr,0,1500);
+										strcat(msgStr,"MESSAGE:");
+										sprintf(numtostr,"%d", sizeof(fname));
+										strcat(msgStr,numtostr);
+										strcat(msgStr,":");
+										strcat(msgStr,clientID);
+										strcat(msgStr,":");
+										strcat(msgStr,fname);
+										if(send(sockfd,msgStr,sizeof(msgStr),0)==-1){
+											perror("send");
+										}
+										
+										//memset(buf,0,MAXBUFLEN);
+										//look for resp
+										// if((numbytes=recv(sockfd,buf,MAX_DATA,0))==-1){
+										// 	perror("recv");
+										// 	exit(1);
+										// }
+										// printf(buf);
+
+									}	
+								}else{
+									printf("something else to read\n");
+								}
+								//memset(buf,0,MAXBUFLEN);                   
+                    			// if ((numbytes = recv(i, buf, MAXBUFLEN, 0)) <= 0) {
+								// 	// got error or connection closed by client                        
+								// 	if (numbytes == 0) {                            
+								// 		// connection closed                            
+								// 		printf("selectserver: socket %d hung up\n", i);                        
+								// 	} else {                            
+								// 		perror("recv");                        
+								// 	}                        
+								// 	close(i); // bye!                        
+								// 	FD_CLR(i, &read_fds); // remove from master set                    
+								// }else{
+								// 	printf("selectserver: socket %d sent message\n", i);
+								// 	printf(buf);
+								// 	printf("\n");
 									
 
-						// 			char type[20];
-						// 			char value[100];
-						// 			int size;
-						// 			char source[50];
-						// 			char data[1000];
-						// 			int cnt=0;
-						// 			int arg=1;
-						// 			for(int k=0;k<500;k++){
-						// 				//printf("%d",k);
-						// 				if(buf[k]==':'){
-						// 					printf(value);
-						// 					printf("\n");
-						// 					if(arg==1){
-						// 						strcpy(type,value);
-						// 					}else if(arg==2){
-						// 						size=atoi(value);
-						// 					}else if(arg==3){
-						// 						strcpy(source,value);
-						// 						for(int j=k+1;j<size;j++){
-						// 							data[j-k-1]=buf[j];
-						// 						}
-						// 						printf(data);
-						// 						break;
-						// 					}
-						// 					memset(value,0,100);
-						// 					arg++;
-						// 					cnt=0;
-						// 				}else{
-						// 					value[cnt]=buf[k];
-						// 					cnt++;
-						// 				}
-						// 			}
-						// 			char print[1000];
-						// 			strcpy(print,source);
-						// 			strcat(print,":");
-						// 			strcat(print,data);
-						// 			printf(print);
+								// 	char type[20];
+								// 	char value[100];
+								// 	int size;
+								// 	char source[50];
+								// 	char data[1000];
+								// 	int cnt=0;
+								// 	int arg=1;
+								// 	for(int k=0;k<500;k++){
+								// 		//printf("%d",k);
+								// 		if(buf[k]==':'){
+								// 			printf(value);
+								// 			printf("\n");
+								// 			if(arg==1){
+								// 				strcpy(type,value);
+								// 			}else if(arg==2){
+								// 				size=atoi(value);
+								// 			}else if(arg==3){
+								// 				strcpy(source,value);
+								// 				for(int j=k+1;j<size;j++){
+								// 					data[j-k-1]=buf[j];
+								// 				}
+								// 				printf(data);
+								// 				break;
+								// 			}
+								// 			memset(value,0,100);
+								// 			arg++;
+								// 			cnt=0;
+								// 		}else{
+								// 			value[cnt]=buf[k];
+								// 			cnt++;
+								// 		}
+								// 	}
+								// 	char print[1000];
+								// 	strcpy(print,source);
+								// 	strcat(print,":");
+								// 	strcat(print,data);
+								// 	printf(print);
 								
-						// 		}
-						// 	}
-						// }
+								//}
+							}
+						}
 						// printf("entering room...\n");
-						memset(splitStrings,0,sizeof(splitStrings));
-						//get command
-						fgets(fname, 100, stdin);
-						fname[strcspn(fname,"\n")]=0;
-						printf(fname);
-						printf("\n");
-						j=0; cnt=0;
+						// memset(splitStrings,0,sizeof(splitStrings));
+						// //get command
+						// fgets(fname, 100, stdin);
+						// fname[strcspn(fname,"\n")]=0;
+						// printf(fname);
+						// printf("\n");
+						// j=0; cnt=0;
 				
-						for(i=0;i<=(strlen(fname));i++)
-						{
-							if(fname[i]==' '||fname[i]=='\0')
-		    		    	{
-		    		       		splitStrings[cnt][j]='\0';
-		    		       		cnt++;  //for next word
-		    		       		j=0;    //for next word, init index to 0
-					    	}
-		        			else
-		        			{
-	       				    	splitStrings[cnt][j]=fname[i];
-	       		    			j++;
-	      		 			}
-		  			    }
-						if(strcmp(splitStrings[0],"/leavesession")==0){
-							memset(msgStr,0,1500);
-							strcat(msgStr,"LEAVE_SESS:");
-							sprintf(numtostr,"%d", sizeof(splitStrings[1]));
-							strcat(msgStr,numtostr);
-							strcat(msgStr,":");
-							strcat(msgStr,clientID);
-							strcat(msgStr,":");
-							//strcat(msgStr,splitStrings[1]);
-							if(send(sockfd,msgStr,sizeof(msgStr),0)==-1){
-								perror("send");
-							}
-							printf("Leaving session...\n");
-							break;
+						// for(i=0;i<=(strlen(fname));i++)
+						// {
+						// 	if(fname[i]==' '||fname[i]=='\0')
+		    		    // 	{
+		    		    //    		splitStrings[cnt][j]='\0';
+		    		    //    		cnt++;  //for next word
+		    		    //    		j=0;    //for next word, init index to 0
+					    // 	}
+		        		// 	else
+		        		// 	{
+	       				//     	splitStrings[cnt][j]=fname[i];
+	       		    	// 		j++;
+	      		 		// 	}
+		  			    // }
+						// if(strcmp(splitStrings[0],"/leavesession")==0){
+						// 	memset(msgStr,0,1500);
+						// 	strcat(msgStr,"LEAVE_SESS:");
+						// 	sprintf(numtostr,"%d", sizeof(splitStrings[1]));
+						// 	strcat(msgStr,numtostr);
+						// 	strcat(msgStr,":");
+						// 	strcat(msgStr,clientID);
+						// 	strcat(msgStr,":");
+						// 	//strcat(msgStr,splitStrings[1]);
+						// 	if(send(sockfd,msgStr,sizeof(msgStr),0)==-1){
+						// 		perror("send");
+						// 	}
+						// 	printf("Leaving session...\n");
+						// 	break;
 							
 
-						}	
-						printf("1");
-						if(fname[0]!='/'){
-							memset(msgStr,0,1500);
-							strcat(msgStr,"MESSAGE:");
-							sprintf(numtostr,"%d", sizeof(fname));
-							strcat(msgStr,numtostr);
-							strcat(msgStr,":");
-							strcat(msgStr,clientID);
-							strcat(msgStr,":");
-							strcat(msgStr,fname);
-							if(send(sockfd,msgStr,sizeof(msgStr),0)==-1){
-								perror("send");
-							}
-							break;
+						// }	
+						// printf("1");
+						// if(fname[0]!='/'){
+						// 	memset(msgStr,0,1500);
+						// 	strcat(msgStr,"MESSAGE:");
+						// 	sprintf(numtostr,"%d", sizeof(fname));
+						// 	strcat(msgStr,numtostr);
+						// 	strcat(msgStr,":");
+						// 	strcat(msgStr,clientID);
+						// 	strcat(msgStr,":");
+						// 	strcat(msgStr,fname);
+						// 	if(send(sockfd,msgStr,sizeof(msgStr),0)==-1){
+						// 		perror("send");
+						// 	}
+							
 							
 
-						}						  
+						// }						  
 				
 
 					}

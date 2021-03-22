@@ -32,7 +32,7 @@ struct clientInfo{
     char password[50];
     char sessionID[50];
     char clientIP[50];
-    char clientPort[50];
+    int clientPort;
 };
 
 int main(void){
@@ -200,6 +200,7 @@ int main(void){
                                         if (send(i, "LO_ACK", sizeof("LO_ACK"), 0) == -1) {                                        
                                             perror("send");                                    
                                         }
+                                        clientData[k].clientPort=i;
                                         loginsuccess=true;
                                         break;
                                     }
@@ -266,13 +267,20 @@ int main(void){
                         }
                         if(strcmp(type,"MESSAGE")==0){
                             printf("Received message request\n");
+                            // if (send(i, "MSG_CFM", sizeof("MSG_CFM"), 0) == -1) {                                        
+                            //     perror("send");                                    
+                            // }
                             for(int k=0;k<(sizeof(clientData)/sizeof(struct clientInfo));k++){
 
                                 if(strcmp(source,clientData[k].clientID)==0){
+
                                     printf("found clientdata\n");
-                                    memset(clientData[k].sessionID,0,1500);
+                                    //memset(clientData[k].sessionID,0,1500);
                                     for(int m=0;m<(sizeof(clientData)/sizeof(struct clientInfo));m++){
                                         if(strcmp(clientData[k].sessionID,clientData[m].sessionID)==0){
+                                            printf("forwarding message to: ");
+                                            printf(clientData[m].clientID);
+                                            printf("\n");
                                             // char msgStr[1500]="";
                                             // strcat(msgStr,"MESSGE");
                                             // strcat(msgStr,":");
@@ -281,7 +289,7 @@ int main(void){
                                             // strcat(msgStr,source);
                                             // strcat(msgStr,":");
                                             // strcat(msgStr,data);
-                                            if (send(i, buf, sizeof(buf), 0) == -1) {                                        
+                                            if (send(clientData[m].clientPort, buf, sizeof(buf), 0) == -1) {                                        
                                                 perror("send");                                    
                                             }
                                         }
