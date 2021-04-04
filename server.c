@@ -30,10 +30,12 @@ void *get_in_addr(struct sockaddr *sa){
 struct clientInfo{
     char clientID[50];
     char password[50];
-    char sessionID[50];
+    char sessionID[20][50];
     char clientIP[50];
     int clientPort;
 };
+
+
 
 int main(void){
 
@@ -153,6 +155,7 @@ int main(void){
                         char value[100];
                         int size;
                         char source[50];
+                        memset(source,0,50);
                         char data[1000];
                         int cnt=0;
                         int arg=1;
@@ -165,14 +168,16 @@ int main(void){
 
                                 if(arg==1){
                                     strcpy(type,value);
+                                    memset(value,0,100);
                                 }else if(arg==2){
                                     size=atoi(value);
+                                    memset(value,0,100);
                                 }else if(arg==3){
                                     strcpy(source,value);
                                     for(int j=k+1;j<size;j++){
                                         data[j-k-1]=buf[j];
                                     }
-
+                                    memset(value,0,100);
                                     break;
                                 }
 				                
@@ -186,6 +191,13 @@ int main(void){
                         printf("Found command:");
                         printf(type);
                         printf("\n");
+                        printf(source);
+                        printf("\n");
+                        printf(data);
+                        printf("\n");
+                        char sess[50];
+                        memset(sess,0,50);
+                        strcpy(sess,data);
                         bool loginsuccess=false;
 
                         if(strcmp(type,"LOGIN")==0){
@@ -221,7 +233,7 @@ int main(void){
 
                                 if(strcmp(source,clientData[k].clientID)==0){
                                     printf("found clientdata\n");
-                                    strcpy(clientData[k].sessionID,data);
+                                    strcpy(clientData[k].sessionID[0],data);
                                     if (send(i, "NS_ACK", sizeof("NS_ACK"), 0) == -1) {                                        
                                         perror("send");                                    
                                     }
@@ -239,14 +251,41 @@ int main(void){
 
                                 if(strcmp(source,clientData[k].clientID)==0){
                                     printf("found clientdata\n");
-                                    strcpy(clientData[k].sessionID,data);
-                                    if (send(i, "JN_ACK", sizeof("JN_ACK"), 0) == -1) {                                        
-                                        perror("send");                                    
+                                    bool exists=false;
+                                    for(int counter=0;counter<20;counter++){
+                                        //printf("Test: %s.\n",clientData[k].sessionID[counter]);
+                                        if(strcmp(clientData[k].sessionID[counter],data)==0){
+                                            exists=true;
+                                            break;
+                                            
+                                        }
+
                                     }
+                                    if(exists){
+                                        break;
+                                    }
+                                    for(int counter=0;counter<20;counter++){
+                                        printf("Test: %s.\n",clientData[k].sessionID[counter]);
+                                        if(strcmp(clientData[k].sessionID[counter],"")==0){
+                                            strcpy(clientData[k].sessionID[counter],data);
+                                            break;
+                                        }
+
+                                    }
+                                    for(int counter=0;counter<20;counter++){
+
+                                        printf("%s\n",clientData[k].sessionID[counter]);
+
+                                    }
+                                    //strcpy(clientData[k].sessionID,data);
+
                                     break;
                                 }
 
 
+                            }
+                            if (send(i, "JN_ACK", sizeof("JN_ACK"), 0) == -1) {                                        
+                                perror("send");                                    
                             }
 
                         }
@@ -256,7 +295,12 @@ int main(void){
 
                                 if(strcmp(source,clientData[k].clientID)==0){
                                     printf("found clientdata\n");
-                                    memset(clientData[k].sessionID,0,1500);
+                                    for(int counter=0;counter<20;counter++){
+                                        if(strcmp(clientData[k].sessionID[counter],data)==0){
+                                            memset(clientData[k].sessionID[counter],0,50);
+                                        }
+                                    }
+                                  
 
                                     break;
                                 }
@@ -265,40 +309,126 @@ int main(void){
                             }
 
                         }
+                        if(strcmp(type,"INVITE")==0){
+                            printf("Received invite request\n");
+                            // if (send(i, "MSG_CFM", sizeof("MSG_CFM"), 0) == -1) {                                        
+                            //     perror("send");                                    
+                            // }
+                            printf("%s\n",buf);
+                            char inviter[50];
+                            memset(inviter,0,50);
+                            for(int k=0;k<(sizeof(clientData)/sizeof(struct clientInfo));k++){
+                                if(clientData[k].clientPort==i){
+                                    strcpy(inviter,clientData[k].clientID);
+                                    break;
+
+                                }
+
+                            }
+                            for(int k=0;k<(sizeof(clientData)/sizeof(struct clientInfo));k++){
+                                if(strcmp(source,clientData[k].clientID)==0){
+                                    char msgStr[1500];
+                                    char numtostr[100];
+                                    memset(msgStr,0,1500);
+                                    memset(numtostr,0,1500);
+                                    strcat(msgStr,"INVITE:");
+                                    sprintf(numtostr,"%d", sizeof(data));
+                                    strcat(msgStr,numtostr);
+                                    strcat(msgStr,":");
+                                    strcat(msgStr,inviter);
+                                    strcat(msgStr,":");
+                                    printf("DATA: %s\n",sess);
+                                    printf(data);
+                                    strcat(msgStr,sess);
+                                    printf("%s\n",msgStr);
+                                    if (send(clientData[k].clientPort, msgStr, sizeof(msgStr), 0) == -1) {                                        
+                                        perror("send");                                    
+                                    }
+
+                                }
+                                printf("Source: %s\n",source);
+
+                                //for(int counter=0;counter<20;counter++){
+                                //     if(strcmp(source,clientData[k].sessionID[counter])==0 && clientData[k].clientPort!=i){
+                                //         printf("invite message to: ");
+                                //         printf(clientData[k].clientID);
+                                //         printf("\n");
+                                //         if (send(clientData[k].clientPort, buf, sizeof(buf), 0) == -1) {                                        
+                                //             perror("send");                                    
+                                //         }
+                                //         break;
+                                //     }
+
+                                // }
+
+
+                            }
+                            
+
+                        }
                         if(strcmp(type,"MESSAGE")==0){
                             printf("Received message request\n");
                             // if (send(i, "MSG_CFM", sizeof("MSG_CFM"), 0) == -1) {                                        
                             //     perror("send");                                    
                             // }
+                            printf("%s\n",buf);
                             for(int k=0;k<(sizeof(clientData)/sizeof(struct clientInfo));k++){
-
-                                if(strcmp(source,clientData[k].clientID)==0){
-
-                                    printf("found clientdata\n");
-                                    //memset(clientData[k].sessionID,0,1500);
-                                    for(int m=0;m<(sizeof(clientData)/sizeof(struct clientInfo));m++){
-                                        if(strcmp(clientData[k].sessionID,clientData[m].sessionID)==0){
-                                            printf("forwarding message to: ");
-                                            printf(clientData[m].clientID);
-                                            printf("\n");
-                                            // char msgStr[1500]="";
-                                            // strcat(msgStr,"MESSGE");
-                                            // strcat(msgStr,":");
-                                            // strcat(msgStr,sizeof(data));
-                                            // strcat(msgStr,":");
-                                            // strcat(msgStr,source);
-                                            // strcat(msgStr,":");
-                                            // strcat(msgStr,data);
-                                            if (send(clientData[m].clientPort, buf, sizeof(buf), 0) == -1) {                                        
-                                                perror("send");                                    
-                                            }
+                                printf("Source: %s\n",source);
+                                for(int counter=0;counter<20;counter++){
+                                    if(strcmp(source,clientData[k].sessionID[counter])==0 && clientData[k].clientPort!=i){
+                                        printf("forwarding message to: ");
+                                        printf(clientData[k].clientID);
+                                        printf("\n");
+                                        if (send(clientData[k].clientPort, buf, sizeof(buf), 0) == -1) {                                        
+                                            perror("send");                                    
                                         }
+                                        break;
                                     }
 
-                                    break;
                                 }
 
+                                // if(strcmp(source,clientData[k].clientID)==0){
 
+                                //     printf("found clientdata\n");
+                                //     //memset(clientData[k].sessionID,0,1500);
+                                //     for(int m=0;m<(sizeof(clientData)/sizeof(struct clientInfo));m++){
+                                //         if(strcmp(clientData[k].sessionID,clientData[m].sessionID)==0 && k!=m){
+                                //             printf("forwarding message to: ");
+                                //             printf(clientData[m].clientID);
+                                //             printf("\n");
+
+                                //             if (send(clientData[m].clientPort, buf, sizeof(buf), 0) == -1) {                                        
+                                //                 perror("send");                                    
+                                //             }
+                                //         }
+                                //     }
+
+                                //     break;
+                                // }
+
+
+                            }
+                            
+
+                        }
+                        if(strcmp(type,"QUERY")==0){
+                            char msgStr[1500];
+                            memset(msgStr,0,1500);
+
+                            //printf("Received join request\n");
+                            for(int k=0;k<(sizeof(clientData)/sizeof(struct clientInfo));k++){
+                                strcat(msgStr,clientData[k].clientID);
+                                strcat(msgStr,":");
+                                for(int counter=0;counter<20;counter++){
+                                    strcat(msgStr,clientData[k].sessionID[counter]);
+                                    strcat(msgStr," ");
+                                }
+                                
+                                strcat(msgStr,";");
+
+                            }
+                            if (send(i, msgStr, sizeof(msgStr), 0) == -1) {                                        
+                                perror("send");                                    
                             }
 
                         }
